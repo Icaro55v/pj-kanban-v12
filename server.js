@@ -10,11 +10,11 @@ app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'src')));
 
-// armazenamento em memória (para demo). Trocar por DB em produção.
+// armazenamento em memória (demo). Trocar por DB em produção.
 const users = {};   // { username: { email, passwordHash } }
 const pending = {}; // { username: { code, passwordHash, email, expiresAt } }
 
-// transporter usando Gmail SMTP (usar App Password / OAuth2 em produção)
+// transporter Gmail SMTP (use App Password ou OAuth2 em produção)
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
@@ -25,9 +25,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// registrar -> envia código por email
 app.post('/api/register', async (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email } = req.body || {};
   if (!username || !password || !email) return res.status(400).json({ error: 'missing_fields' });
 
   const u = username.toLowerCase();
@@ -35,7 +34,7 @@ app.post('/api/register', async (req, res) => {
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const passwordHash = await bcrypt.hash(password, 10);
-  pending[u] = { code, passwordHash, email, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10 min
+  pending[u] = { code, passwordHash, email, expiresAt: Date.now() + 10 * 60 * 1000 };
 
   try {
     await transporter.sendMail({
@@ -52,10 +51,9 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// verificar código -> cria conta permanente (demo: em memória)
 app.post('/api/verify', (req, res) => {
-  const { username, code } = req.body;
-  const u = username.toLowerCase();
+  const { username, code } = req.body || {};
+  const u = (username || '').toLowerCase();
   const p = pending[u];
   if (!p || p.expiresAt < Date.now()) return res.status(400).json({ error: 'invalid_or_expired' });
   if (p.code !== code) return res.status(400).json({ error: 'wrong_code' });
@@ -65,10 +63,9 @@ app.post('/api/verify', (req, res) => {
   return res.json({ ok: true });
 });
 
-// login simples (demo)
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
-  const u = username.toLowerCase();
+  const { username, password } = req.body || {};
+  const u = (username || '').toLowerCase();
   const user = users[u];
   if (!user) return res.status(400).json({ error: 'invalid_credentials' });
   const match = await bcrypt.compare(password, user.passwordHash);

@@ -1,3 +1,34 @@
+---
+
+## Limpeza e otimização aplicadas neste branch
+As seguintes ações de limpeza/organização foram aplicadas ao repositório para reduzir duplicação e facilitar desenvolvimento local:
+
+- Criei `.gitignore` para ignorar `node_modules/`, `.env`, `/data` e logs temporários.
+- Adicionei suporte a um backend de autenticação de exemplo (arquivo `server.js` foi estendido) que persiste usuários em `data/users.json` e códigos em `data/pending.json`.
+- Adicionei UI server-based em `/auth/login.html` (registro / verificação / login) que consome as rotas `/api/register`, `/api/verify`, `/api/login`.
+- Arquivei versões duplicadas/antigas de login em `archive/`:
+  - `archive/login_root.firebase.html` — cópia arquivada da versão `login.html` que usava Firebase.
+  - `archive/src_auth_login.html` — cópia arquivada da versão que estava em `src/auth/login.html`.
+  As versões ativas são `index.html` (Kanban) e `auth/login.html` (server-based).
+
+## Como rodar (resumo rápido)
+1. Copie `.env.example` para `.env` (ou use o `.env` já criado) e preencha `GMAIL_USER` e `GMAIL_PASS` (App Password do Gmail) quando quiser envio real de e‑mail.
+2. Instale dependências:
+```bash
+npm install
+```
+3. Inicie o servidor (exemplo usa PORT=3000 por padrão):
+```bash
+# matar processo que usa 3000 (se existir)
+PID=$(lsof -ti :3000) && [ -n "$PID" ] && kill $PID || true
+nohup npm start > /tmp/pj-kanban.log 2>&1 & disown
+sed -n '1,200p' /tmp/pj-kanban.log
+```
+4. Acesse:
+  - Kanban: `http://localhost:3000/index.html`
+  - Login/Registro (server): `http://localhost:3000/auth/login.html`
+
+Se quiser que eu faça mais limpeza (por exemplo remover permanentemente arquivos arquivados, migrar persistência para SQLite, ou harmonizar totalmente com Firebase), diga qual opção prefere.
 # Kanban Peças — instruções e utilitários
 
 Este repositório contém um quadro Kanban feito com HTML, Tailwind CSS e Firebase Realtime Database (versão 9 - compat). O código principal de cliente está em `index.html` e a autenticação em `login.html`.

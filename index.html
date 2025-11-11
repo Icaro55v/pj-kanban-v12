@@ -39,8 +39,9 @@
             <div class="flex items-center space-x-2 mr-2">
                 <label for="header-priority-select" class="text-sm font-medium sr-only">Prioridade Padrão</label>
                 <select id="header-priority-select" class="px-3 py-2 rounded-lg bg-white text-gray-800 text-sm border border-green-600">
+                    <option value="all" selected>Todas</option>
                     <option value="low">Baixa</option>
-                    <option value="medium" selected>Média</option>
+                    <option value="medium">Média</option>
                     <option value="high">Alta</option>
                 </select>
             </div>
@@ -307,11 +308,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!task) return;
             const existingCard = document.querySelector(`[data-task-id="${taskId}"]`);
             if (existingCard) return; // evita duplicatas
-            const newCard = createTaskElement(task, taskId);
+                const newCard = createTaskElement(task, taskId);
             const colId = task.column || 'col-restaurar';
             if (columns[colId]) columns[colId].appendChild(newCard);
             // Aplica filtro atual e atualiza contadores
             applyPriorityFilter();
+            // Se o card adicionado estiver oculto pelo filtro, simplesmente não contarão
             updateAllCounts();
         };
 
@@ -435,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 taskIdHidden.value = taskId; // O ID para salvar
                 taskIdInput.classList.add('hidden');
                 taskIdInput.disabled = true;
-                taskIdDisplay.textContent = `ID: ${task.id}`; // O ID visível
+                taskIdDisplay.textContent = `ID: ${task.idOS || task.id}`; // O ID visível
                 taskIdDisplay.classList.remove('hidden');
                 taskTextInput.value = task.text;
                 taskPriorityInput.value = task.priority || 'medium';
@@ -469,7 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function getPriorityClasses(priority){
         if (priority === 'high') return { border:'border-red-500', text:'Alta', bg:'bg-red-500' };
         if (priority === 'medium') return { border:'border-orange-500', text:'Média', bg:'bg-orange-500' };
-        return { border:'border-blue-500', text:'Baixa', bg:'bg-blue-500' };
+        if (priority === 'low') return { border:'border-blue-500', text:'Baixa', bg:'bg-blue-500' };
+        // default / all
+        return { border:'border-gray-400', text:'Todas', bg:'bg-gray-500' };
     }
 
     // Atualiza o badge de prioridade ao lado do título
@@ -492,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createTaskElement(task, taskId){
         const p = getPriorityClasses(task.priority);
         // Sanitização é boa prática, embora o Firebase já nos proteja de injeção
-        const idSan = DOMPurify.sanitize(task.id);
+        const idSan = DOMPurify.sanitize(task.idOS || task.id || '');
         const textSan = DOMPurify.sanitize(task.text);
         
         const card = document.createElement('div');
@@ -551,33 +555,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     priority: priority
                 });
             } else {
-                // --- MODO ADIÇÃO (SET/CREATE) ---
-                const id = taskIdInput.value.trim(); // ID da OS (customizado)
-                if (!id) { 
-                    modalErrorMessage.textContent = 'Nº da OS/SM é obrigatório.'; 
+                // --- MODO ADIÇÃO (PUSH) ---
+                // Normaliza o ID da OS para evitar duplicatas por diferença de case/espacos
+                const idOS = taskIdInput.value.trim().toUpperCase(); // ID da OS (customizado)
+                if (!idOS) { 
+                    modalErrorMessage.textContent = 'Nº / Código é obrigatório.'; 
                     saveTaskBtn.disabled = false;
-                    saveTaskBtn.textContent = "Salvar Ordem";
+                    saveTaskBtn.textContent = "Salvar";
                     return; 
                 }
 
                 const newTask = {
-                    id: id,
+                    idOS: idOS,
                     text: text,
                     priority: priority,
                     column: 'col-restaurar' // Sempre começa na primeira coluna
                 };
-                
-                // Verifica se o ID já existe
-                const snap = await dbTasksRef.child(id).once('value');
-                if (snap.exists()) {
+
+                // Verifica se já existe uma tarefa com o mesmo idOS
+                const existsSnap = await dbTasksRef.orderByChild('idOS').equalTo(idOS).once('value');
+                if (existsSnap.exists()) {
                     modalErrorMessage.textContent = 'Este número já existe.';
                     saveTaskBtn.disabled = false;
                     saveTaskBtn.textContent = "Salvar";
                     return;
                 }
 
-                // Usa child(id).set() para usar nosso ID customizado como chave
-                await dbTasksRef.child(id).set(newTask);
+                // Usa push() para gerar uma chave única e salvar idOS dentro do objeto
+                const newRef = dbTasksRef.push();
+                await newRef.set(newTask);
             }
             
             closeTaskModal();

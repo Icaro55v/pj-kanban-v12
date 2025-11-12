@@ -1,3 +1,39 @@
+/* Estilos compartilhados básicos (mobile-first) */
+:root{
+  --brand: #047857; /* verde */
+  --brand-600: #059669;
+  --muted: #6b7280;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; color:#0f172a; background:#f8fafc}
+
+/* Cabeçalho simples e responsivo usado nas páginas pequenas */
+.site-header{background:var(--brand);color:#fff}
+.site-header .container{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.site-header h1{margin:0;font-size:1.125rem;font-weight:600}
+.site-header .site-actions{display:flex;gap:8px;align-items:center}
+.btn{display:inline-block;padding:8px 12px;border-radius:8px;border:0;background:var(--brand-600);color:#fff;text-decoration:none;font-weight:600}
+.btn-muted{background:#edf2f7;color:#0f172a;border:1px solid #e2e8f0}
+
+/* Forms básicos usados por login/registro */
+.form-card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,0.06);max-width:520px;margin:18px auto}
+label{display:block;font-size:0.9rem;margin-bottom:6px;color:#334155}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid #e6edf1;border-radius:8px;margin-bottom:10px;font-size:1rem}
+button[type=submit]{cursor:pointer}
+.msg{font-size:0.95rem;color:var(--muted)}
+.msg.ok{color:#057a55}
+
+/* Helpers */
+.container{max-width:1100px;margin:0 auto;padding:0 16px}
+
+@media(min-width:768px){
+  .site-header .container{padding:16px}
+  .site-header h1{font-size:1.25rem}
+}
+
+/* Pequenas correções para o index que já usa Tailwind */
+.kanban-column-body { scrollbar-width: thin; }
 /* Shared project styles - mobile-first */
 :root{
   --max-w:1200px;

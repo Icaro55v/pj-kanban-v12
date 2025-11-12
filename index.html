@@ -18,6 +18,8 @@
         .sortable-chosen { cursor: grabbing; opacity: 0.9; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .kanban-column-body { max-height: 75vh; overflow-y: auto; }
     </style>
+    <!-- Shared styles for pages without Tailwind -->
+    <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body class="antialiased text-gray-900">
 
@@ -656,5 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // A inicialização agora é controlada pelo onAuthStateChanged (seção 4)
 });
 </script>
+<!-- optional shared nav script (no-op if page already has header.site-header) -->
+<script src="/src/nav.js" defer></script>
 </body>
 </html>

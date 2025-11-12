@@ -4,16 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login / Registrar</title>
-  <style>
-    body{font-family:Arial;padding:20px}
-    form{max-width:420px;margin-bottom:20px}
-    input{width:100%;padding:8px;margin:6px 0;box-sizing:border-box}
-    .msg{font-size:0.95em;color:#b00020}
-    .ok{color:#006600}
-  </style>
+  <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
+  <!-- header será injetado por /src/nav.js se não existir -->
+  <script src="/src/nav.js" defer></script>
   <h2>Registrar</h2>
+  <div class="form-card">
   <form id="registerForm" novalidate>
     <input id="r_username" placeholder="Usuário" required />
     <input id="r_email" type="email" placeholder="Email (receberá código)" required />
@@ -21,6 +18,7 @@
     <button type="submit">Enviar código por email</button>
     <div id="r_msg" class="msg" aria-live="polite"></div>
   </form>
+  </div>
 
   <div id="verifyBox" style="display:none">
     <h3>Digite o código recebido</h3>
@@ -33,12 +31,14 @@
   <hr/>
 
   <h2>Login</h2>
+  <div class="form-card">
   <form id="loginForm" novalidate>
     <input id="l_username" placeholder="Usuário" required />
     <input id="l_password" type="password" placeholder="Senha" required />
     <button type="submit">Entrar</button>
     <div id="l_msg" class="msg" aria-live="polite"></div>
   </form>
+  </div>
 
   <script>
     async function postJSON(url, body) {

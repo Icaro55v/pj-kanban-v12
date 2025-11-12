@@ -1,0 +1,39 @@
+/* Shared project styles - mobile-first */
+:root{
+  --max-w:1200px;
+  --accent:#16a34a; /* green-600 */
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111}
+.container{max-width:var(--max-w);margin:0 auto;padding:16px}
+.header{background:var(--accent);color:#fff}
+.header .inner{display:flex;align-items:center;justify-content:space-between;padding:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-size:1.1rem;margin:0}
+.nav{display:none}
+.nav a{color:#fff;text-decoration:none;padding:8px 10px;display:block}
+.nav a:hover{background:rgba(255,255,255,0.05)}
+.nav-toggle{background:transparent;border:0;color:#fff;font-size:1.2rem;padding:8px}
+
+/* Desktop */
+@media(min-width:800px){
+  .nav{display:flex;gap:8px}
+  .nav a{display:inline-block}
+  .nav-toggle{display:none}
+}
+
+/* Tables responsive */
+.table-responsive{overflow:auto}
+.table-responsive table{width:100%;border-collapse:collapse}
+.table-responsive th,.table-responsive td{padding:8px;border-bottom:1px solid #e5e7eb}
+
+/* Forms */
+.form-row{display:flex;flex-direction:column;gap:8px}
+@media(min-width:800px){.form-row.row{display:flex;flex-direction:row}.form-row.row > *{flex:1}}
+
+/* Utility */
+.btn{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:6px}
+.small-muted{color:#6b7280;font-size:0.9rem}
+
+/* Improve modal/transitions used earlier */
+.hidden{display:none}

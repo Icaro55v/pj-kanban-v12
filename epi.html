@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EPI - Controle de Inventário</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f7fafc}
+    .card{background:#fff;padding:16px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.06);margin-bottom:12px}
+    input,select{width:100%;padding:8px;margin:6px 0;border:1px solid #d1d5db;border-radius:6px}
+    button{padding:8px 12px;border-radius:6px;background:#047857;color:#fff;border:0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
+    .muted{color:#6b7280;font-size:0.9em}
+  </style>
+</head>
+<body>
+  <h1>Controle de EPI</h1>
+  <div class="card grid">
+    <div>
+      <h3>Cadastro de tipo de EPI</h3>
+      <label>Nome</label>
+      <input id="epi-name" placeholder="Ex: Capacete" />
+      <label>Nº CA</label>
+      <input id="epi-ca" placeholder="Ex: CA-12345" />
+      <label>Quantidade inicial</label>
+      <input id="epi-qty" type="number" min="0" value="0" />
+      <button id="btn-add-epi">Adicionar EPI</button>
+      <p id="epi-msg" class="muted"></p>
+    </div>
+    <div>
+      <h3>Movimentação</h3>
+      <label>Item</label>
+      <select id="mov-item"><option value="">-- selecione --</option></select>
+      <label>Tipo</label>
+      <select id="mov-type"><option value="out">Saída</option><option value="in">Entrada</option><option value="return">Devolução</option></select>
+      <label>Quantidade</label>
+      <input id="mov-qty" type="number" min="1" value="1" />
+      <label>Observação (opcional)</label>
+      <input id="mov-note" placeholder="Ex: entregue ao colaborador X" />
+      <button id="btn-mov">Registrar Movimentação</button>
+      <p id="mov-msg" class="muted"></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Estoque atual</h3>
+    <table id="table-epi"><thead><tr><th>Nome</th><th>CA</th><th>Qtd</th><th>Ações</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <h3>Histórico de movimentações</h3>
+    <table id="table-hist"><thead><tr><th>Data</th><th>Item</th><th>Tipo</th><th>Qtd</th><th>Por</th><th>Obs</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <p class="muted">Observações: todas as operações são salvas no Realtime Database do Firebase (compat mode).</p>
+
+<script>
+// Copie o mesmo firebaseConfig que existe em index.html
+const firebaseConfig = {
+    apiKey: "AIzaSyBBrp0r27bdq0_Giw-OcefyGTgtNny2U_g",
+    authDomain: "gfyfy7fy.firebaseapp.com",
+    databaseURL: "https://gfyfy7fy-default-rtdb.firebaseio.com",
+    projectId: "gfyfy7fy",
+    storageBucket: "gfyfy7fy.firebasestorage.app",
+    messagingSenderId: "55023990965",
+    appId: "1:55023990965:web:227802c9e20ba07f6f26fc",
+    measurementId: "G-WK5QQDSC4Y"
+};
+
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+let currentUser = null;
+let userUid = null;
+let epiRef = null; // /users/{uid}/epi/items
+let histRef = null; // /users/{uid}/epi/history
+
+// DOM
+const epiName = document.getElementById('epi-name');
+const epiCA = document.getElementById('epi-ca');
+const epiQty = document.getElementById('epi-qty');
+const btnAdd = document.getElementById('btn-add-epi');
+const epiMsg = document.getElementById('epi-msg');
+const movItem = document.getElementById('mov-item');
+const movType = document.getElementById('mov-type');
+const movQty = document.getElementById('mov-qty');
+const movNote = document.getElementById('mov-note');
+const btnMov = document.getElementById('btn-mov');
+const movMsg = document.getElementById('mov-msg');
+const tableEpi = document.querySelector('#table-epi tbody');
+const tableHist = document.querySelector('#table-hist tbody');
+
+// Autenticação: redireciona para login se não logado
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user; userUid = user.uid;
+    epiRef = db.ref('users/' + userUid + '/epi/items');
+    histRef = db.ref('users/' + userUid + '/epi/history');
+    initListeners();
+  } else {
+    window.location.replace('auth/login.html');
+  }
+});
+
+function initListeners(){
+  // load items
+  epiRef.on('child_added', snap => renderItem(snap.key, snap.val()));
+  epiRef.on('child_changed', snap => updateItemRow(snap.key, snap.val()));
+  epiRef.on('child_removed', snap => removeItemRow(snap.key));
+  // history
+  histRef.orderByChild('ts').on('child_added', snap => renderHist(snap.val()));
+}
+
+function renderItem(key, item){
+  // add option
+  const opt = document.createElement('option'); opt.value = key; opt.textContent = item.name + ' ('+ (item.ca||'') +')';
+  movItem.appendChild(opt);
+  // add table row
+  const tr = document.createElement('tr'); tr.dataset.key = key;
+  tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.ca||'')}</td><td>${item.qty}</td><td><button data-key="${key}" class="btn-del">Excluir</button></td>`;
+  tableEpi.appendChild(tr);
+  tr.querySelector('.btn-del').addEventListener('click', ()=>{ if(confirm('Excluir esse tipo de EPI?')) epiRef.child(key).remove(); });
+}
+
+function updateItemRow(key, item){
+  const tr = tableEpi.querySelector(`tr[data-key="${key}"]`);
+  if (tr) tr.innerHTML = `<td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.ca||'')}</td><td>${item.qty}</td><td><button data-key="${key}" class="btn-del">Excluir</button></td>`;
+}
+function removeItemRow(key){
+  const tr = tableEpi.querySelector(`tr[data-key="${key}"]`);
+  if (tr) tr.remove();
+  // remove option
+  const opt = movItem.querySelector(`option[value="${key}"]`);
+  if (opt) opt.remove();
+}
+
+btnAdd.addEventListener('click', async ()=>{
+  epiMsg.textContent = '';
+  const name = epiName.value.trim();
+  const ca = epiCA.value.trim();
+  const qty = parseInt(epiQty.value,10)||0;
+  if(!name){ epiMsg.textContent='Nome obrigatório'; return; }
+  try{
+    const newRef = epiRef.push();
+    await newRef.set({ name, ca, qty });
+    epiMsg.textContent = 'EPI cadastrado.';
+    epiName.value=''; epiCA.value=''; epiQty.value='0';
+  }catch(err){ epiMsg.textContent = 'Erro: '+err.message; }
+});
+
+btnMov.addEventListener('click', async ()=>{
+  movMsg.textContent='';
+  const itemId = movItem.value; if(!itemId){ movMsg.textContent='Selecione um item'; return; }
+  const type = movType.value; const qty = Math.abs(parseInt(movQty.value,10)||0);
+  if(qty<=0){ movMsg.textContent='Quantidade inválida'; return; }
+  const note = movNote.value.trim();
+  const itemRef = epiRef.child(itemId);
+  try{
+    await itemRef.transaction(current=>{
+      if(current===null) return current; // item missing
+      let newQty = current.qty||0;
+      if(type==='out'){
+        if(newQty < qty) return; // abort transaction
+        newQty = newQty - qty;
+      } else if(type==='in' || type==='return'){
+        newQty = newQty + qty;
+      }
+      current.qty = newQty;
+      return current;
+    }, async (err, committed, snapshot)=>{
+      if(err){ movMsg.textContent='Erro: '+err.message; return; }
+      if(!committed){ movMsg.textContent='Operação não completada (saldo insuficiente?)'; return; }
+      // gravar histórico
+      const h = { itemId, type, qty, by: currentUser.email||currentUser.uid, note, ts: Date.now() };
+      await histRef.push(h);
+      movMsg.textContent='Movimentação registrada.';
+      movNote.value=''; movQty.value='1';
+    });
+  }catch(err){ movMsg.textContent='Erro: '+err.message; }
+});
+
+function renderHist(h){
+  const tr = document.createElement('tr');
+  const d = new Date(h.ts||Date.now());
+  tr.innerHTML = `<td>${d.toLocaleString()}</td><td>${escapeHtml(getItemName(h.itemId))}</td><td>${escapeHtml(h.type)}</td><td>${h.qty}</td><td>${escapeHtml(h.by)}</td><td>${escapeHtml(h.note||'')}</td>`;
+  // prepend
+  tableHist.insertBefore(tr, tableHist.firstChild);
+}
+
+// Helpers
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// get item name from current DOM option (fast cache)
+function getItemName(id){ const opt = movItem.querySelector(`option[value="${id}"]`); return opt?opt.textContent:id; }
+
+</script>
+</body>
+</html>
